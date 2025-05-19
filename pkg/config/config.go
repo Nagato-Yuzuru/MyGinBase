@@ -6,10 +6,10 @@ import (
 
 // Config 是应用程序的完整配置结构
 type Config struct {
-	App AppConfig `mapstructure:"app" validate:"required"`
+	//App AppConfig `mapstructure:"app" validate:"required"`
 	//Server    ServerConfig    `mapstructure:"server" validate:"required"`
 	//Database  DatabaseConfig  `mapstructure:"database" validate:"required"`
-	//Logger    LoggerConfig    `mapstructure:"logger" validate:"required"`
+	Logger LoggerConfig `mapstructure:"logger" validate:"required"`
 	//Cache     CacheConfig     `mapstructure:"cache"`
 	//Telemetry TelemetryConfig `mapstructure:"telemetry"`
 }
@@ -48,9 +48,9 @@ type DatabaseConfig struct {
 
 // LoggerConfig 日志配置
 type LoggerConfig struct {
-	Level      string `mapstructure:"level" validate:"required,oneof=debug info warn error dpanic panic fatal"`
-	Format     string `mapstructure:"format" validate:"required,oneof=json console"`
-	OutputPath string `mapstructure:"output_path"`
+	Level  string `mapstructure:"level" validate:"required,oneof=debug info warn error dpanic panic fatal"`
+	Format string `mapstructure:"format" validate:"required,oneof=json console"`
+	//OutputPath string `mapstructure:"output_path"`
 }
 
 // CacheConfig 缓存配置
@@ -70,49 +70,49 @@ type TelemetryConfig struct {
 	ServiceName  string `mapstructure:"service_name"`
 }
 
-// DefaultConfig 返回带有默认值的配置
-func DefaultConfig() *Config {
-	return &Config{
-		App: AppConfig{
-			Name:        "web-service",
-			Environment: "development",
-			Version:     "0.1.0",
-			Debug:       false,
-		},
-		//	Server: ServerConfig{
-		//		Host:            "0.0.0.0",
-		//		Port:            8080,
-		//		ReadTimeout:     5 * time.Second,
-		//		WriteTimeout:    10 * time.Second,
-		//		ShutdownTimeout: 30 * time.Second,
-		//		TrustedProxies:  []string{"127.0.0.1", "::1"},
-		//	},
-		//	Database: DatabaseConfig{
-		//		Driver:          "postgres",
-		//		Host:            "localhost",
-		//		Port:            5432,
-		//		Username:        "postgres",
-		//		Password:        "",
-		//		Database:        "app_db",
-		//		SSLMode:         "disable",
-		//		MaxOpenConns:    10,
-		//		MaxIdleConns:    5,
-		//		ConnMaxLifetime: 5 * time.Minute,
-		//	},
-		//	Logger: LoggerConfig{
-		//		Level:      "info",
-		//		Format:     "json",
-		//		OutputPath: "stdout",
-		//	},
-		//	Cache: CacheConfig{
-		//		Enabled:    false,
-		//		Type:       "memory",
-		//		DefaultTTL: 5 * time.Minute,
-		//	},
-		//	Telemetry: TelemetryConfig{
-		//		Enabled:      true,
-		//		OtelEndpoint: "localhost:4317",
-		//		ServiceName:  "web-service",
-		//	},
-	}
-}
+//// DefaultConfig 返回带有默认值的配置
+//func DefaultConfig() *Config {
+//	return &Config{
+//		App: AppConfig{
+//			Name:        "web-service",
+//			Environment: "development",
+//			Version:     "0.1.0",
+//			Debug:       false,
+//		},
+//	Server: ServerConfig{
+//		Host:            "0.0.0.0",
+//		Port:            8080,
+//		ReadTimeout:     5 * time.Second,
+//		WriteTimeout:    10 * time.Second,
+//		ShutdownTimeout: 30 * time.Second,
+//		TrustedProxies:  []string{"127.0.0.1", "::1"},
+//	},
+//	Database: DatabaseConfig{
+//		Driver:          "postgres",
+//		Host:            "localhost",
+//		Port:            5432,
+//		Username:        "postgres",
+//		Password:        "",
+//		Database:        "app_db",
+//		SSLMode:         "disable",
+//		MaxOpenConns:    10,
+//		MaxIdleConns:    5,
+//		ConnMaxLifetime: 5 * time.Minute,
+//	},
+//	Logger: LoggerConfig{
+//		Level:      "info",
+//		Format:     "json",
+//		OutputPath: "stdout",
+//	},
+//	Cache: CacheConfig{
+//		Enabled:    false,
+//		Type:       "memory",
+//		DefaultTTL: 5 * time.Minute,
+//	},
+//	Telemetry: TelemetryConfig{
+//		Enabled:      true,
+//		OtelEndpoint: "localhost:4317",
+//		ServiceName:  "web-service",
+//	},
+//}
+//}

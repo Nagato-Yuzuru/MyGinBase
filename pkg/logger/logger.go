@@ -2,7 +2,9 @@ package logger
 
 import (
 	"context"
+	"errors"
 	"os"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
@@ -22,70 +24,90 @@ type Logger interface {
 	Sync() error
 }
 
-type zapLogger struct {
+type ZapLogger struct {
 	logger *zap.Logger
 }
 
-// NewZapLogger creates a new zap logger.
+var (
+	zapLogger     *ZapLogger
+	zapLoggerOnce sync.Once
+)
+
+// ProvideZapLogger creates a new zap logger.
 // It allows configuring the log level and whether to output in JSON format.
-func NewZapLogger(level string, isJSON bool, appName string, appVersion string) (Logger, error) {
-	logLevel := zapcore.InfoLevel
-	if err := logLevel.Set(level); err != nil {
-		logLevel = zapcore.InfoLevel // Default to Info if parsing fails
-	}
+func ProvideZapLogger(level string, isJSON bool, appName string, appVersion string) (*ZapLogger, error) {
+	zapLoggerOnce.Do(
+		func() {
+			logLevel := zapcore.InfoLevel
+			if err := logLevel.Set(level); err != nil {
+				logLevel = zapcore.InfoLevel // Default to Info if parsing fails
+			}
 
-	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "ts",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		FunctionKey:    "func",
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-	}
+			encoderConfig := zapcore.EncoderConfig{
+				TimeKey:        "ts",
+				LevelKey:       "level",
+				NameKey:        "logger",
+				CallerKey:      "caller",
+				FunctionKey:    "func",
+				MessageKey:     "msg",
+				StacktraceKey:  "stacktrace",
+				LineEnding:     zapcore.DefaultLineEnding,
+				EncodeLevel:    zapcore.LowercaseLevelEncoder,
+				EncodeTime:     zapcore.ISO8601TimeEncoder,
+				EncodeDuration: zapcore.SecondsDurationEncoder,
+				EncodeCaller:   zapcore.ShortCallerEncoder,
+			}
 
-	var encoder zapcore.Encoder
-	if isJSON {
-		encoder = zapcore.NewJSONEncoder(encoderConfig)
-	} else {
-		encoder = zapcore.NewConsoleEncoder(encoderConfig)
-	}
+			var encoder zapcore.Encoder
+			if isJSON {
+				encoder = zapcore.NewJSONEncoder(encoderConfig)
+			} else {
+				encoder = zapcore.NewConsoleEncoder(encoderConfig)
+			}
 
-	// 使用缓冲写入器来提高性能
-	bufferSize := 256 * 1024 // 例如，256KB的缓冲区
-	flushInterval := 5 * time.Second
-	writer := zapcore.AddSync(os.Stdout)
+			bufferSize := 256 * 1024
+			flushInterval := 5 * time.Second
+			writer := zapcore.AddSync(os.Stdout)
 
-	bufferedWriter := &zapcore.BufferedWriteSyncer{
-		WS:            writer,
-		Size:          bufferSize,
-		FlushInterval: flushInterval,
-	}
+			bufferedWriter := &zapcore.BufferedWriteSyncer{
+				WS:            writer,
+				Size:          bufferSize,
+				FlushInterval: flushInterval,
+			}
 
-	asyncCore := zapcore.NewCore(
-		encoder,
-		bufferedWriter,
-		logLevel,
+			asyncCore := zapcore.NewCore(
+				encoder,
+				bufferedWriter,
+				logLevel,
+			)
+
+			// Add common fields
+			fields := []zap.Field{
+				zap.String("service.name", appName),
+				zap.String("service.version", appVersion),
+			}
+
+			// Wrap the asyncCore with zap.New to create the logger
+			logger := zap.New(
+				asyncCore,
+				zap.AddCaller(),
+				zap.AddCallerSkip(1),
+				zap.AddStacktrace(zapcore.ErrorLevel),
+			).With(fields...)
+
+			zapLogger = &ZapLogger{logger: logger}
+		},
 	)
 
-	// Add common fields
-	fields := []zap.Field{
-		zap.String("service.name", appName),
-		zap.String("service.version", appVersion),
+	if zapLogger == nil {
+		return nil, errors.New("zap logger is not initialized, call zap logger init first")
 	}
 
-	// Wrap the asyncCore with zap.New to create the logger
-	logger := zap.New(asyncCore, zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zapcore.ErrorLevel)).With(fields...)
+	return zapLogger, nil
 
-	return &zapLogger{logger: logger}, nil
 }
 
-func (l *zapLogger) getTraceFields(ctx context.Context) []zap.Field {
+func (l *ZapLogger) getTraceFields(ctx context.Context) []zap.Field {
 	span := trace.SpanFromContext(ctx)
 	if span.SpanContext().IsValid() {
 		return []zap.Field{
@@ -96,41 +118,41 @@ func (l *zapLogger) getTraceFields(ctx context.Context) []zap.Field {
 	return nil
 }
 
-func (l *zapLogger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *ZapLogger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
 	allFields := append(l.getTraceFields(ctx), fields...)
 	l.logger.Debug(msg, allFields...)
 }
 
-func (l *zapLogger) Info(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *ZapLogger) Info(ctx context.Context, msg string, fields ...zap.Field) {
 	allFields := append(l.getTraceFields(ctx), fields...)
 	l.logger.Info(msg, allFields...)
 }
 
-func (l *zapLogger) Warn(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *ZapLogger) Warn(ctx context.Context, msg string, fields ...zap.Field) {
 	allFields := append(l.getTraceFields(ctx), fields...)
 	l.logger.Warn(msg, allFields...)
 }
 
-func (l *zapLogger) Error(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *ZapLogger) Error(ctx context.Context, msg string, fields ...zap.Field) {
 	allFields := append(l.getTraceFields(ctx), fields...)
 	l.logger.Error(msg, allFields...)
 }
 
-func (l *zapLogger) Fatal(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *ZapLogger) Fatal(ctx context.Context, msg string, fields ...zap.Field) {
 	allFields := append(l.getTraceFields(ctx), fields...)
 	l.logger.Fatal(msg, allFields...)
 }
 
-func (l *zapLogger) Panic(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *ZapLogger) Panic(ctx context.Context, msg string, fields ...zap.Field) {
 	allFields := append(l.getTraceFields(ctx), fields...)
 	l.logger.Panic(msg, allFields...)
 }
 
-func (l *zapLogger) With(fields ...zap.Field) Logger {
-	return &zapLogger{logger: l.logger.With(fields...)}
+func (l *ZapLogger) With(fields ...zap.Field) Logger {
+	return &ZapLogger{logger: l.logger.With(fields...)}
 }
 
 // Sync flushes any buffered log entries.
-func (l *zapLogger) Sync() error {
+func (l *ZapLogger) Sync() error {
 	return l.logger.Sync()
 }

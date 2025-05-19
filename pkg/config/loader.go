@@ -7,33 +7,67 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 type Loader interface {
 	Load() (*Config, error)
 	Valid(cfg *Config) error
+	SetLoaderParams(
+		configNames []string,
+		configType string,
+		configPaths []string,
+		envPrefix string,
+		defaults map[string]any,
+	)
 }
 
 type ViperLoader struct {
 	*viper.Viper
 	*validator.Validate
 
-	configName  string
+	configNames []string
 	configType  string
 	configPaths []string
 	envPrefix   string
-	defaults    map[string]interface{}
+	defaults    map[string]any
 }
 
-func NewViperLoader(configName string, configType string, configPaths []string, envPrefix string, defaults map[string]interface{}) *ViperLoader {
+func (l *ViperLoader) SetLoaderParams(
+	configNames []string,
+	configType string,
+	configPaths []string,
+	envPrefix string,
+	defaults map[string]any,
+) {
+
+	l.configNames = configNames
+	l.configType = configType
+	l.configPaths = configPaths
+	l.envPrefix = envPrefix
+	l.defaults = defaults
+
+	if envPrefix != "" {
+		l.SetEnvPrefix(envPrefix)
+	}
+
+	godotenv.Load()
+
+	l.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "__"))
+	//l.AutomaticEnv()
+	for k, v := range defaults {
+		l.SetDefault(k, v)
+	}
+}
+
+func NewViperLoader() *ViperLoader {
 	return &ViperLoader{
 		Viper: viper.New(), Validate: validator.New(),
-		configName: configName, configType: configType, configPaths: configPaths, envPrefix: envPrefix, defaults: defaults}
+	}
 }
 
 func (l *ViperLoader) bind(t reflect.Type, parent string) {
-	// 若 t 是指针，取 Elem
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
@@ -54,13 +88,11 @@ func (l *ViperLoader) bind(t reflect.Type, parent string) {
 			continue
 		}
 
-		// 拼接完整 key：parent.child
 		key := tag
 		if parent != "" {
 			key = parent + "." + tag
 		}
 
-		// 继续向下递归（排除 time.Duration 等特殊结构体）
 		if f.Type.Kind() == reflect.Struct &&
 			!(f.Type.PkgPath() == "time" && f.Type.Name() == "Duration") {
 			l.bind(f.Type, key)
@@ -73,7 +105,7 @@ func (l *ViperLoader) bind(t reflect.Type, parent string) {
 }
 
 func (l *ViperLoader) Valid(cfg *Config) error {
-	err := l.Struct(&cfg)
+	err := l.Struct(cfg)
 
 	if err == nil {
 		return nil
@@ -90,8 +122,15 @@ func (l *ViperLoader) Valid(cfg *Config) error {
 		var validationErrorMessages []string
 
 		for _, fieldErr := range validationErrs {
-			validationErrorMessages = append(validationErrorMessages,
-				fmt.Sprintf("fields '%s' valid faild: rule '%s', value is '%v'", fieldErr.Namespace(), fieldErr.Tag(), fieldErr.Value()))
+			validationErrorMessages = append(
+				validationErrorMessages,
+				fmt.Sprintf(
+					"fields '%s' valid faild: rule '%s', value is '%v'",
+					fieldErr.Namespace(),
+					fieldErr.Tag(),
+					fieldErr.Value(),
+				),
+			)
 		}
 		return fmt.Errorf("invalid params:\n - %s", strings.Join(validationErrorMessages, "\n - "))
 	}
@@ -99,39 +138,34 @@ func (l *ViperLoader) Valid(cfg *Config) error {
 	return err
 }
 
-func (l *ViperLoader) init() {
-	l.Viper.SetConfigName(l.configName)
+func (l *ViperLoader) Load() (*Config, error) {
+
+	var cfg Config
+
+	l.bind(reflect.TypeOf(cfg), "")
+
 	l.Viper.SetConfigType(l.configType)
 
 	for _, path := range l.configPaths {
 		l.Viper.AddConfigPath(path)
 	}
 
-}
+	for i, name := range l.configNames {
+		var err error
+		l.Viper.SetConfigName(name)
+		if i == 0 {
+			err = l.ReadInConfig()
+		} else {
+			err = l.MergeInConfig()
+		}
 
-func (l *ViperLoader) Load() (*Config, error) {
-	l.init()
-
-	if err := l.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if !errors.As(err, &configFileNotFoundError) {
-			return nil, fmt.Errorf("config load error: %w", err)
+		var notFound viper.ConfigFileNotFoundError
+		if errors.As(err, &notFound) {
+			continue
+		} else if err != nil {
+			return nil, fmt.Errorf("read config error: %w", err)
 		}
 	}
-
-	if l.envPrefix != "" {
-		l.SetEnvPrefix(l.envPrefix)
-	}
-
-	l.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "__"))
-	l.AutomaticEnv()
-	for k, v := range l.defaults {
-		l.SetDefault(k, v)
-	}
-
-	var cfg Config
-
-	l.bind(reflect.TypeOf(cfg), "")
 
 	if err := l.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("config unmarshal error: %w", err)

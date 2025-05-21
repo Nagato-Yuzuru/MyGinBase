@@ -1,17 +1,20 @@
 WIRE := wire
+WIRE_INPUTS := $(shell find . -type f -name "wire.go")
+WIRE_OUTPUTS := $(WIRE_INPUTS:wire.go=wire_gen.go)
+
 
 .PHONY: all
 all: mod_tidy wire
 
 
 # wire gen
-./inject/wire_gen.go: ./inject/wire.go
-	@echo "Generating wire files..."
-	@$(WIRE) ./...
-	@echo "Wire files generated successfully."
+%wire_gen.go: %/wire.go
+	@echo "Running wire..."
+	@$(WIRE) ./$(*D)
+	@echo "Wire generation $(*D) completed successfully."
 
 .PHONY: wire
-wire: ./inject/wire_gen.go
+wire: $(WIRE_OUTPUTS)
 	@echo "Wire target executed."
 
 # go mod tidy

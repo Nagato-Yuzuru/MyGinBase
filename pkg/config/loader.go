@@ -113,9 +113,8 @@ func (l *ViperLoader) Valid(cfg *Config) error {
 
 	var invalidVE *validator.InvalidValidationError
 	var validationErrs validator.ValidationErrors
-
 	if errors.As(err, &invalidVE) {
-		return fmt.Errorf("invalid params %w", err)
+		return invalidVE
 	}
 
 	if errors.As(err, &validationErrs) {
@@ -132,7 +131,7 @@ func (l *ViperLoader) Valid(cfg *Config) error {
 				),
 			)
 		}
-		return fmt.Errorf("invalid params:\n - %s", strings.Join(validationErrorMessages, "\n - "))
+		return NewErrConfigInvalid(strings.Join(validationErrorMessages, "\n - "), validationErrs)
 	}
 
 	return err
@@ -144,15 +143,15 @@ func (l *ViperLoader) Load() (*Config, error) {
 
 	l.bind(reflect.TypeOf(cfg), "")
 
-	l.Viper.SetConfigType(l.configType)
+	l.SetConfigType(l.configType)
 
 	for _, path := range l.configPaths {
-		l.Viper.AddConfigPath(path)
+		l.AddConfigPath(path)
 	}
 
 	for i, name := range l.configNames {
 		var err error
-		l.Viper.SetConfigName(name)
+		l.SetConfigName(name)
 		if i == 0 {
 			err = l.ReadInConfig()
 		} else {

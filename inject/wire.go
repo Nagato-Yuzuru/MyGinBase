@@ -27,12 +27,12 @@ import (
 var (
 	viperLoader     config.ViperLoader
 	configParamOnce sync.Once
-	ConfigParam     config.ProvideParam
+	ConfigParam     config.configParam
 )
 
 const ENV = "ENV"
 
-func NewProvideParam() config.ProvideParam {
+func NewProvideParam() config.configParam {
 	configParamOnce.Do(
 		func() {
 			env, exist := os.LookupEnv(ENV)
@@ -42,7 +42,7 @@ func NewProvideParam() config.ProvideParam {
 			}
 			env = strings.ToLower(env)
 
-			ConfigParam = config.ProvideParam{
+			ConfigParam = config.configParam{
 				ConfigNames: []string{"base", env},
 				ConfigType:  "yaml",
 				ConfigPaths: []string{"./config"},
@@ -59,6 +59,7 @@ var ConfigSet = wire.NewSet(
 	NewProvideParam,
 	wire.Bind(new(config.Loader), new(*config.ViperLoader)),
 	config.ProvideConfig,
+	wire.FieldsOf(new(config.Config), "Logger", "DatabaseD"),
 )
 
 func InitializeConfig() *config.Config {

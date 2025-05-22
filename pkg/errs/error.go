@@ -5,14 +5,14 @@ import (
 	"strings"
 )
 
-type baseError struct {
+type codedError struct {
 	code           // 错误代码
 	causes []error // 原始错误
 }
 
-func (e *baseError) Is(target error) bool {
+func (e *codedError) Is(target error) bool {
 
-	codeErr, ok := target.(WithCodeErr)
+	codeErr, ok := target.(CodedError)
 
 	if !ok {
 		return false
@@ -23,7 +23,7 @@ func (e *baseError) Is(target error) bool {
 	return false
 }
 
-func (e *baseError) Error() string {
+func (e *codedError) Error() string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("[%d] %s", e.code, e.code))
 
@@ -39,22 +39,28 @@ func (e *baseError) Error() string {
 	return b.String()
 }
 
-func (e *baseError) Code() code {
+func (e *codedError) Code() code {
 	return e.code
 }
 
-func (e *baseError) Unwrap() []error {
+func (e *codedError) Unwrap() []error {
 	return e.causes
 }
 
-func newError(code code, causes ...error) *baseError {
+func newError(code code, causes ...error) *codedError {
 
-	return &baseError{
+	return &codedError{
 		code:   code,
 		causes: causes,
 	}
 }
 
-func WrapCodeError(code code, causes ...error) WithCodeErr {
+func WrapCodeError(code code, causes ...error) CodedError {
+	if len(causes) == 1 {
+		if cause, ok := causes[0].(CodedError); ok && cause.Code() == code {
+			return cause
+		}
+	}
+
 	return newError(code, causes...)
 }

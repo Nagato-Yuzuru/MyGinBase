@@ -6,27 +6,27 @@ import (
 )
 
 type ErrConfigNotFound interface {
-	errs.WithCodeErr
+	errs.CodedError
 	LackConfigName() string
 }
 
 type errConfigNotFound struct {
-	errs.WithCodeErr
+	errs.CodedError
 	lackConfigName string
 }
 
 func NewErrConfigNotFound(err error, lackConfigName string) ErrConfigNotFound {
-	var wrappedErr errs.WithCodeErr
+	var wrappedErr errs.CodedError
 	if errors.As(err, &wrappedErr) && errs.IsErrorCode(wrappedErr, errs.ErrEnvironmentConfig) {
 		return &errConfigNotFound{
-			WithCodeErr:    wrappedErr,
+			CodedError:     wrappedErr,
 			lackConfigName: lackConfigName,
 		}
 
 	}
 
 	return &errConfigNotFound{
-		WithCodeErr:    errs.WrapCodeError(errs.ErrEnvironmentConfig, err),
+		CodedError:     errs.WrapCodeError(errs.ErrEnvironmentConfig, err),
 		lackConfigName: lackConfigName,
 	}
 }
@@ -36,26 +36,26 @@ func (e *errConfigNotFound) LackConfigName() string {
 }
 
 type ErrConfigInvalid interface {
-	errs.WithCodeErr
+	errs.CodedError
 	InvalidConfig() string
 }
 
 type errConfigInvalid struct {
-	errs.WithCodeErr
+	errs.CodedError
 	invalidConfig string
 }
 
 func NewErrConfigInvalid(err error, invalidConfig string) ErrConfigInvalid {
-	var wrappedErr errs.WithCodeErr
+	var wrappedErr errs.CodedError
 	if errors.As(err, &wrappedErr) && errs.IsErrorCode(err, errs.ErrEnvironmentConfig) {
 		return &errConfigInvalid{
-			WithCodeErr:   wrappedErr,
+			CodedError:    wrappedErr,
 			invalidConfig: invalidConfig,
 		}
 	}
 
 	return &errConfigInvalid{
-		WithCodeErr:   errs.WrapCodeError(errs.ErrEnvironmentConfig, err),
+		CodedError:    errs.WrapCodeError(errs.ErrEnvironmentConfig, err),
 		invalidConfig: invalidConfig,
 	}
 }

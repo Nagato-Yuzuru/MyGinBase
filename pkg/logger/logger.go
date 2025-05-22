@@ -123,6 +123,10 @@ func ProvideZapLogger(lp *loggerParas) (*ZapLogger, error) {
 }
 
 func (l *ZapLogger) getTraceFields(ctx context.Context) []zap.Field {
+	if ctx == nil {
+		return nil
+	}
+
 	span := trace.SpanFromContext(ctx)
 	if span.SpanContext().IsValid() {
 		return []zap.Field{

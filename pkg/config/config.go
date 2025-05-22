@@ -25,7 +25,7 @@ type AppConfig struct {
 // ServerConfig HTTP服务器配置
 type ServerConfig struct {
 	Host            string        `mapstructure:"host" validate:"required"`
-	Port            int           `mapstructure:"port" validate:"required,min=1,max=65535"`
+	Port            int32         `mapstructure:"port" validate:"required,min=1,max=65535"`
 	ReadTimeout     time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
@@ -36,14 +36,16 @@ type ServerConfig struct {
 type DatabaseConfig struct {
 	Driver          string        `mapstructure:"driver" validate:"required,oneof=postgres mysql sqlite"`
 	Host            string        `mapstructure:"host"`
-	Port            int           `mapstructure:"port"`
+	Port            int32         `mapstructure:"port"`
 	Username        string        `mapstructure:"username"`
 	Password        string        `mapstructure:"password"`
 	Database        string        `mapstructure:"database" validate:"required"`
 	SSLMode         string        `mapstructure:"ssl_mode"`
-	MaxOpenConns    int           `mapstructure:"max_open_conns"`
-	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
+	MaxOpenConns    int32         `mapstructure:"max_open_conns"`
+	MaxIdleConns    int32         `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
+	DebugSQL        bool          `mapstructure:"debug_sql"`
 }
 
 // LoggerConfig 日志配置

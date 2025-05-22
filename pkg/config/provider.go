@@ -26,7 +26,7 @@ var (
 	param           configParam
 )
 
-func GetConfigParam() configParam {
+func getConfigParam() configParam {
 	configParamOnce.Do(
 		func() {
 			env, exist := os.LookupEnv(ENV)

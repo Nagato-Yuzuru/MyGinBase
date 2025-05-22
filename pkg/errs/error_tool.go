@@ -12,7 +12,7 @@ func IsErrorCode(err error, codes ...code) bool {
 		return false
 	}
 
-	var codeErr WithCodeErr
+	var codeErr CodedError
 	if errors.As(err, &codeErr) {
 		errCode := codeErr.Code()
 		for _, code := range codes {
@@ -25,13 +25,13 @@ func IsErrorCode(err error, codes ...code) bool {
 	return false
 }
 
-func isCodeInRange(code WithCodeErr, start code, end code) bool {
+func isCodeInRange(code CodedError, start code, end code) bool {
 	return code.Code() >= start && code.Code() <= end
 }
 
 // ---------------- 错误分类工具函数 ----------------
 func isErrorInRange(err error, start code, end code) bool {
-	var codeErr WithCodeErr
+	var codeErr CodedError
 	if !errors.As(err, &codeErr) {
 		return false
 	}
@@ -44,7 +44,7 @@ func HasErrorInRange(err error, start code, end code) bool {
 	if err == nil {
 		return false
 	}
-	var codeErr WithCodeErr
+	var codeErr CodedError
 
 	if errors.As(err, &codeErr) {
 		if isCodeInRange(codeErr, start, end) {

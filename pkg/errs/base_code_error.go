@@ -13,7 +13,7 @@ type BaseChainError interface {
 	Is(error) bool
 }
 
-type WithCodeErr interface {
+type CodedError interface {
 	fmt.Stringer
 	BaseChainError
 	Code() code
@@ -37,6 +37,7 @@ const (
 	ErrTimeout                                 // 请求超时 (可区分为客户端请求超时或服务端处理超时)
 	ErrPayloadTooLarge                         // 请求内容过大
 	ErrUnsupportedMediaType                    // 不支持的媒体类型
+	ErrResourceInitFailed                      // 资源初始化失败
 )
 
 // 认证与授权相关错误 (2000-2999)
@@ -57,10 +58,9 @@ const (
 	ErrMaintenanceMode                       // 系统维护中
 	ErrOverloaded                            // 系统过载
 	ErrDependencyFailure                     // 依赖服务失败
-	// ErrTimeoutServiceUnavailable 可以被 ErrTimeout (如果明确为服务端) 或 ErrDependencyFailure 覆盖，或保留并更名
-	ErrNotImplemented // 功能未实现 (从原内部错误移入)
-	ErrNilPointer     // 空指针异常 (从原运行时错误移入)
-	ErrEnvironmentConfig
+	ErrNotImplemented                        // 功能未实现 (从原内部错误移入)
+	ErrNilPointer                            // 空指针异常 (从原运行时错误移入)
+	ErrEnvironmentConfig                     // 环境配置失败
 )
 
 // 数据存储相关错误 (4000-4999)

@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"GinBase/pkg/errs"
 	"context"
 	"errors"
 	"os"
@@ -33,9 +34,23 @@ var (
 	zapLoggerOnce sync.Once
 )
 
-// ProvideZapLogger creates a new zap logger.
-// It allows configuring the log level and whether to output in JSON format.
-func ProvideZapLogger(level string, isJSON bool, appName string, appVersion string) (*ZapLogger, error) {
+type loggerParas struct {
+	level      string
+	isJSON     bool
+	appName    string
+	appVersion string
+}
+
+func ProvideZapLogger(lp *loggerParas) (*ZapLogger, error) {
+	if lp == nil {
+		return nil, errs.WrapCodeError(errs.ErrNilPointer, errors.New("loggerParas is nil"))
+	}
+
+	level := lp.level
+	isJSON := lp.isJSON
+	appName := lp.appName
+	appVersion := lp.appVersion
+
 	zapLoggerOnce.Do(
 		func() {
 			logLevel := zapcore.InfoLevel

@@ -11,11 +11,11 @@ var ConfigSet = wire.NewSet(
 	NewViperLoader,
 	GetConfigParam,
 	wire.Bind(new(Loader), new(*ViperLoader)),
-	config.ProvideConfig,
-	wire.FieldsOf(new(config.Config), "Logger", "DatabaseD"),
+	ProvideConfig,
+	wire.FieldsOf(new(Config), "Logger"),
 )
 
-func InitializeConfig() *Config {
+func InitializeConfig() Config {
 	wire.Build(ConfigSet)
-	return nil
+	return Config{}
 }

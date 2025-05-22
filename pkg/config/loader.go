@@ -131,7 +131,7 @@ func (l *ViperLoader) Valid(cfg *Config) error {
 				),
 			)
 		}
-		return NewErrConfigInvalid(strings.Join(validationErrorMessages, "\n - "), validationErrs)
+		return NewErrConfigInvalid(validationErrs, strings.Join(validationErrorMessages, "\n - "))
 	}
 
 	return err

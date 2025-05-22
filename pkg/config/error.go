@@ -2,34 +2,33 @@ package config
 
 import (
 	"GinBase/pkg/errs"
-	"fmt"
+	"errors"
 )
 
 type ErrConfigNotFound interface {
 	errs.WithCodeErr
 	LackConfigName() string
-	Unwrap() error
 }
 
 type errConfigNotFound struct {
+	errs.WithCodeErr
 	lackConfigName string
-	wrappedErr     error
 }
 
-func NewErrConfigNotFound(lackConfigName string, wrappedErr error) ErrConfigNotFound {
-	return &errConfigNotFound{lackConfigName: lackConfigName, wrappedErr: wrappedErr}
-}
+func NewErrConfigNotFound(err error, lackConfigName string) ErrConfigNotFound {
+	var wrappedErr errs.WithCodeErr
+	if errors.As(err, &wrappedErr) && errs.IsErrorCode(wrappedErr, errs.ErrEnvironmentConfig) {
+		return &errConfigNotFound{
+			WithCodeErr:    wrappedErr,
+			lackConfigName: lackConfigName,
+		}
 
-func (e *errConfigNotFound) Unwrap() error {
-	return e.wrappedErr
-}
+	}
 
-func (e *errConfigNotFound) Error() string {
-	return fmt.Sprintf("config not found: %s", e.lackConfigName)
-}
-
-func (e *errConfigNotFound) Code() errs.Code {
-	return errs.ErrNotFound
+	return &errConfigNotFound{
+		WithCodeErr:    errs.WrapCodeError(errs.ErrEnvironmentConfig, err),
+		lackConfigName: lackConfigName,
+	}
 }
 
 func (e *errConfigNotFound) LackConfigName() string {
@@ -39,30 +38,28 @@ func (e *errConfigNotFound) LackConfigName() string {
 type ErrConfigInvalid interface {
 	errs.WithCodeErr
 	InvalidConfig() string
-	Unwrap() error
 }
 
 type errConfigInvalid struct {
+	errs.WithCodeErr
 	invalidConfig string
-	wrappedErr    error
 }
 
-func (e *errConfigInvalid) Code() errs.Code {
-	return errs.ErrInvalidParam
-}
+func NewErrConfigInvalid(err error, invalidConfig string) ErrConfigInvalid {
+	var wrappedErr errs.WithCodeErr
+	if errors.As(err, &wrappedErr) && errs.IsErrorCode(err, errs.ErrEnvironmentConfig) {
+		return &errConfigInvalid{
+			WithCodeErr:   wrappedErr,
+			invalidConfig: invalidConfig,
+		}
+	}
 
-func NewErrConfigInvalid(invalidConfig string, wrappedErr error) ErrConfigInvalid {
-	return &errConfigInvalid{invalidConfig: invalidConfig, wrappedErr: wrappedErr}
-}
-
-func (e *errConfigInvalid) Error() string {
-	return fmt.Sprintf("%s invalid: %v", e.invalidConfig, e.wrappedErr)
+	return &errConfigInvalid{
+		WithCodeErr:   errs.WrapCodeError(errs.ErrEnvironmentConfig, err),
+		invalidConfig: invalidConfig,
+	}
 }
 
 func (e *errConfigInvalid) InvalidConfig() string {
 	return e.invalidConfig
-}
-
-func (e *errConfigInvalid) Unwrap() error {
-	return e.wrappedErr
 }

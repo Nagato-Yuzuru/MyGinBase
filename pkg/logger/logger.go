@@ -1,11 +1,11 @@
 package logger
 
 import (
-	"GinBase/pkg/errs"
 	"context"
 	"errors"
 	"os"
 	"sync"
+	"terraqt.io/bedrock-go/pkg/config"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
@@ -34,22 +34,12 @@ var (
 	zapLoggerOnce sync.Once
 )
 
-type loggerParas struct {
-	level      string
-	isJSON     bool
-	appName    string
-	appVersion string
-}
+func ProvideZapLogger(lc config.LoggerConfig) (Logger, error) {
 
-func ProvideZapLogger(lp *loggerParas) (*ZapLogger, error) {
-	if lp == nil {
-		return nil, errs.WrapCodeError(errs.ErrNilPointer, errors.New("loggerParas is nil"))
-	}
-
-	level := lp.level
-	isJSON := lp.isJSON
-	appName := lp.appName
-	appVersion := lp.appVersion
+	level := lc.Level
+	format := lc.Format
+	appName := lc.AppName
+	appVersion := lc.AppVersion
 
 	zapLoggerOnce.Do(
 		func() {
@@ -74,10 +64,12 @@ func ProvideZapLogger(lp *loggerParas) (*ZapLogger, error) {
 			}
 
 			var encoder zapcore.Encoder
-			if isJSON {
+			if format == "json" {
 				encoder = zapcore.NewJSONEncoder(encoderConfig)
-			} else {
+			} else if format == "console" {
 				encoder = zapcore.NewConsoleEncoder(encoderConfig)
+			} else {
+				encoder = zapcore.NewJSONEncoder(encoderConfig) // Default to JSON if format is not recognized
 			}
 
 			bufferSize := 256 * 1024

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type code int
+type code int16
 
 type BaseChainError interface {
 	error
@@ -21,7 +21,10 @@ type CodedError interface {
 
 // 通用基础错误 (1-999)
 const (
-	ErrUnknown code = iota + 1 // 未知错误
+	ErrUnknown               code = iota + 1 // 未知错误
+	ErrResourceInitFailed                    // 资源初始化失败
+	ErrInfraResourceNotFound                 // infra资源未找到
+	ErrResourceCloseFailed                   // 资源关闭失败
 	// 注意：原有的 ErrInvalidParam, ErrUnauthorized, ErrForbidden, ErrNotFound, ErrInternal 已移至更具体的分类
 )
 
@@ -34,10 +37,9 @@ const (
 	ErrGone                                    // 资源不再可用 (从数据操作移入)
 	ErrValidationFailed                        // 数据验证失败 (从数据操作移入)
 	ErrRateLimited                             // 请求频率超限
-	ErrTimeout                                 // 请求超时 (可区分为客户端请求超时或服务端处理超时)
+	ErrClientTimeout                           // 客户端请求超时
 	ErrPayloadTooLarge                         // 请求内容过大
 	ErrUnsupportedMediaType                    // 不支持的媒体类型
-	ErrResourceInitFailed                      // 资源初始化失败
 )
 
 // 认证与授权相关错误 (2000-2999)
@@ -51,16 +53,12 @@ const (
 	ErrAccountDisabled                      // 账户已禁用
 )
 
-// 服务端状态与内部错误 (3000-3999)
+// 外部错误 (3000-3999)
 const (
-	ErrInternalServer     code = 3000 + iota // 内部服务错误 (合并了原 ErrInternal 和 ErrInternalServerError)
-	ErrServiceUnavailable                    // 服务暂时不可用
-	ErrMaintenanceMode                       // 系统维护中
-	ErrOverloaded                            // 系统过载
-	ErrDependencyFailure                     // 依赖服务失败
-	ErrNotImplemented                        // 功能未实现 (从原内部错误移入)
-	ErrNilPointer                            // 空指针异常 (从原运行时错误移入)
-	ErrEnvironmentConfig                     // 环境配置失败
+	ErrDependencyFailure     code = 3000 + iota // 依赖服务失败
+	ErrDependencyTimeout                        // 依赖超时
+	ErrDependencyUnavailable                    // 依赖服务不可用
+	ErrDependencyResponse                       // 依赖服务响应异常
 )
 
 // 数据存储相关错误 (4000-4999)
@@ -72,5 +70,18 @@ const (
 	ErrDataCorruption                    // 数据损坏或格式错误 (从原数据操作移入)
 )
 
-// 业务错误 （5000-5999）
+// 内部错误 (5000-5999)
+const (
+	ErrInternalServer          code = 5000 + iota // 内部服务错误 (合并了原 ErrInternal 和 ErrInternalServerError)
+	ErrServiceUnavailable                         // 服务暂时不可用
+	ErrMaintenanceMode                            // 系统维护中
+	ErrOverloaded                                 // 系统过载
+	ErrNotImplemented                             // 功能未实现 (从原内部错误移入)
+	ErrNilPointer                                 // 空指针异常 (从原运行时错误移入)
+	ErrServerProcessingTimeout                    // 服务超时
+	ErrConcurrencyConflict                        // 并发冲突
+	ErrEnvironmentConfig                          // 环境配置失败
+)
+
+// 业务错误 （6000-6999）
 const ()

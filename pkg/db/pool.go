@@ -1,32 +1,29 @@
 package db
 
 import (
-	"GinBase/pkg/config"
-	"GinBase/pkg/errs"
-	"GinBase/pkg/logger"
 	"context"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
-	"io"
 	"sync"
+	"terraqt.io/bedrock-go/pkg/config"
+	"terraqt.io/bedrock-go/pkg/errs"
+	"terraqt.io/bedrock-go/pkg/logger"
 	"time"
 )
 
 var (
 	poolOnce sync.Once
-	pool     Pool
+	pool     PGPool
 	poolErr  error
 )
 
-type Pool interface {
+type PGPool interface {
 	Acquire(ctx context.Context) (*pgxpool.Conn, error)
-	io.Closer
 	driver.Pinger
-	BeginTx(ctx context.Context, opts *pgx.TxOptions) (pgx.Tx, error)
+	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
 }
 
 type contextKey string
@@ -47,6 +44,7 @@ func (s *sqlTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.
 	startTime, ok := ctx.Value(queryStartTimeKey).(time.Time)
 	if !ok {
 		s.Warn(ctx, "Failed to get query start time from context")
+		return
 	}
 
 	if data.Err != nil {
@@ -59,11 +57,11 @@ func (s *sqlTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.
 }
 
 type postgresPool struct {
-	pool *pgxpool.Pool
-	log  logger.Logger
+	*pgxpool.Pool
+	log logger.Logger
 }
 
-func newPostgresPool(config config.DatabaseConfig, log logger.Logger) (Pool, error) {
+func newPostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, error) {
 
 	connString := fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
@@ -122,12 +120,12 @@ func newPostgresPool(config config.DatabaseConfig, log logger.Logger) (Pool, err
 	log.Info(nil, "Successfully connected to database")
 
 	return &postgresPool{
-		pool: dbPool,
+		Pool: dbPool,
 		log:  log,
 	}, nil
 }
 
-func ProvidePostgresPool(config config.DatabaseConfig, log logger.Logger) (Pool, error) {
+func ProvidePostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, error) {
 	poolOnce.Do(
 		func() {
 			pool, poolErr = newPostgresPool(config, log)
@@ -146,7 +144,7 @@ func ProvidePostgresPool(config config.DatabaseConfig, log logger.Logger) (Pool,
 
 // Acquire 获取数据库连接
 func (p *postgresPool) Acquire(ctx context.Context) (*pgxpool.Conn, error) {
-	conn, err := p.pool.Acquire(ctx)
+	conn, err := p.Pool.Acquire(ctx)
 	if err != nil {
 		p.log.Error(nil, "failed to acquire database connection", zap.Error(err))
 		return nil, errs.WrapCodeError(
@@ -157,21 +155,8 @@ func (p *postgresPool) Acquire(ctx context.Context) (*pgxpool.Conn, error) {
 	return conn, nil
 }
 
-func (p *postgresPool) Close() error {
-	if p.pool != nil {
-		p.pool.Close()
-		p.log.Info(nil, "database connection pool closed")
-		return nil
-	}
-
-	return errs.WrapCodeError(
-		errs.ErrUnknown,
-		errors.New("database connection pool is nil"),
-	)
-}
-
 func (p *postgresPool) Ping(ctx context.Context) error {
-	if err := p.pool.Ping(ctx); err != nil {
+	if err := p.Pool.Ping(ctx); err != nil {
 		p.log.Error(nil, "failed to ping database", zap.Error(err))
 		return errs.WrapCodeError(
 			errs.ErrDBConnection,
@@ -181,18 +166,13 @@ func (p *postgresPool) Ping(ctx context.Context) error {
 	return nil
 }
 
-func (p *postgresPool) BeginTx(ctx context.Context, opts *pgx.TxOptions) (pgx.Tx, error) {
-	var txOpts pgx.TxOptions
+// BeginTx starts a new database transaction using the provided context and transaction options.
+// If options are nil, the default transaction ReadCommitted is applied.
+// Returns the transaction object or an error if the transaction initialization fails.
+func (p *postgresPool) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error) {
 
-	if opts == nil {
-		txOpts = pgx.TxOptions{
-			IsoLevel: pgx.Serializable,
-		}
-	} else {
-		txOpts = *opts
-	}
+	tx, err := p.Pool.BeginTx(ctx, opts)
 
-	tx, err := p.pool.BeginTx(ctx, txOpts)
 	if err != nil {
 		p.log.Error(nil, "failed to begin transaction", zap.Error(err))
 		return nil, errs.WrapCodeError(

@@ -48,12 +48,12 @@ func getConfigParam() configParam {
 	return param
 }
 
-func ProvideConfig(
+func provideConfig(
 	l Loader,
-	p configParam,
 ) Config {
 	loadOnce.Do(
 		func() {
+			p := getConfigParam()
 			l.SetLoaderParams(p.ConfigNames, p.ConfigType, p.ConfigPaths, p.EnvPrefix, p.Defaults)
 
 			var err error

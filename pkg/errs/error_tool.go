@@ -76,8 +76,8 @@ func IsAuthentication(err error) bool {
 	return isErrorInRange(err, 2000, 2999)
 }
 
-// IsInternal 检查是否为内部错误
-func IsInternal(err error) bool {
+// IsExternal 检查是否为外部错误
+func IsExternal(err error) bool {
 	return isErrorInRange(err, 3000, 3999)
 }
 
@@ -86,7 +86,12 @@ func IsDatabase(err error) bool {
 	return isErrorInRange(err, 4000, 4999)
 }
 
+// IsInternal 检查是否为内部错误
+func IsInternal(err error) bool {
+	return isErrorInRange(err, 5000, 5999)
+}
+
 // IsBusiness 检查是否为业务相关错误
 func IsBusiness(err error) bool {
-	return isErrorInRange(err, 5000, 5999)
+	return isErrorInRange(err, 6000, 6999)
 }

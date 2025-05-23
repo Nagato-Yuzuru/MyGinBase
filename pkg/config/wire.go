@@ -9,9 +9,8 @@ import (
 
 var ConfigSet = wire.NewSet(
 	NewViperLoader,
-	getConfigParam,
 	wire.Bind(new(Loader), new(*ViperLoader)),
-	ProvideConfig,
+	provideConfig,
 	wire.FieldsOf(new(Config), "Logger", "Database"),
 )
 

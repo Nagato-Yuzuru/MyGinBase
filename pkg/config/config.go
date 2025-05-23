@@ -50,8 +50,11 @@ type DatabaseConfig struct {
 
 // LoggerConfig 日志配置
 type LoggerConfig struct {
-	Level  string `mapstructure:"level" validate:"required,oneof=debug info warn error dpanic panic fatal"`
-	Format string `mapstructure:"format" validate:"required,oneof=json console"`
+	Level      string `mapstructure:"level" validate:"required,oneof=debug info warn error dpanic panic fatal"`
+	Format     string `mapstructure:"format" validate:"required,oneof=json console"`
+	AppName    string `mapstructure:"app_name"`
+	AppVersion string `mapstructure:"app_version"`
+
 	//OutputPath string `mapstructure:"output_path"`
 }
 

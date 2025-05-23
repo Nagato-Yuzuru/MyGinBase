@@ -1,8 +1,8 @@
 package config
 
 import (
-	"GinBase/pkg/errs"
 	"errors"
+	"terraqt.io/bedrock-go/pkg/errs"
 )
 
 type ErrConfigNotFound interface {

@@ -1,24 +1,21 @@
 //go:build wireinject
 // +build wireinject
 
-package db
+package logger
 
 import (
 	"github.com/google/wire"
 	"terraqt.io/bedrock-go/pkg/config"
-	"terraqt.io/bedrock-go/pkg/logger"
 )
 
-var PoolSet = wire.NewSet(
-	ProvidePostgresPool,
+var LoggerSet = wire.NewSet(
+	ProvideZapLogger,
 )
 
-func InitializePGPool() (PGPool, error) {
+func InitializeLogger() (Logger, error) {
 	wire.Build(
-		logger.LoggerSet,
+		LoggerSet,
 		config.ConfigSet,
-		PoolSet,
 	)
-
 	return nil, nil
 }

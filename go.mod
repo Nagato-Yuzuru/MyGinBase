@@ -1,4 +1,4 @@
-module GinBase
+module terraqt.io/colas/bedrock-go
 
 go 1.24
 

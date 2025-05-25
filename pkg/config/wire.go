@@ -8,10 +8,9 @@ import (
 )
 
 var ConfigSet = wire.NewSet(
-	NewViperLoader,
+	newViperLoader,
 	wire.Bind(new(Loader), new(*ViperLoader)),
 	provideConfig,
-	wire.FieldsOf(new(Config), "Logger", "Database"),
 )
 
 func InitializeConfig() Config {

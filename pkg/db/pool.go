@@ -8,9 +8,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 	"sync"
-	"terraqt.io/bedrock-go/pkg/config"
-	"terraqt.io/bedrock-go/pkg/errs"
-	"terraqt.io/bedrock-go/pkg/logger"
+	"terraqt.io/colas/bedrock-go/pkg/config"
+	"terraqt.io/colas/bedrock-go/pkg/errs"
+	"terraqt.io/colas/bedrock-go/pkg/logger"
 	"time"
 )
 
@@ -24,6 +24,11 @@ type PGPool interface {
 	Acquire(ctx context.Context) (*pgxpool.Conn, error)
 	driver.Pinger
 	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
+}
+
+type adaptPool interface {
+	PGPool
+	getStdPool() *pgxpool.Pool
 }
 
 type contextKey string
@@ -59,6 +64,10 @@ func (s *sqlTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.
 type postgresPool struct {
 	*pgxpool.Pool
 	log logger.Logger
+}
+
+func (p *postgresPool) getStdPool() *pgxpool.Pool {
+	return p.Pool
 }
 
 func newPostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, error) {
@@ -125,7 +134,7 @@ func newPostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, e
 	}, nil
 }
 
-func ProvidePostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, error) {
+func providePostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, error) {
 	poolOnce.Do(
 		func() {
 			pool, poolErr = newPostgresPool(config, log)

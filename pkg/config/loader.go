@@ -61,7 +61,7 @@ func (l *ViperLoader) SetLoaderParams(
 	}
 }
 
-func NewViperLoader() *ViperLoader {
+func newViperLoader() *ViperLoader {
 	return &ViperLoader{
 		Viper: viper.New(), Validate: validator.New(),
 	}

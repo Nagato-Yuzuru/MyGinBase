@@ -4,21 +4,35 @@
 package db
 
 import (
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/wire"
-	"terraqt.io/bedrock-go/pkg/config"
-	"terraqt.io/bedrock-go/pkg/logger"
+	"terraqt.io/colas/bedrock-go/pkg/config"
+	"terraqt.io/colas/bedrock-go/pkg/logger"
 )
 
 var PoolSet = wire.NewSet(
-	ProvidePostgresPool,
+	provideAdaptPool,
+	providePostgresPool,
+	provideDriver,
 )
 
 func InitializePGPool() (PGPool, error) {
 	wire.Build(
-		logger.LoggerSet,
-		config.ConfigSet,
+		config.InitializeConfig,
+		wire.FieldsOf(new(config.Config), "Database"),
+		logger.InitializeLogger,
 		PoolSet,
 	)
 
+	return nil, nil
+}
+
+func InitializeDriver() (*sql.Driver, error) {
+	wire.Build(
+		config.InitializeConfig,
+		wire.FieldsOf(new(config.Config), "Database"),
+		logger.InitializeLogger,
+		PoolSet,
+	)
 	return nil, nil
 }

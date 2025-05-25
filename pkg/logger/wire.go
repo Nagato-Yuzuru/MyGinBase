@@ -5,17 +5,18 @@ package logger
 
 import (
 	"github.com/google/wire"
-	"terraqt.io/bedrock-go/pkg/config"
+	"terraqt.io/colas/bedrock-go/pkg/config"
 )
 
 var LoggerSet = wire.NewSet(
-	ProvideZapLogger,
+	provideZapLogger,
 )
 
 func InitializeLogger() (Logger, error) {
 	wire.Build(
 		LoggerSet,
-		config.ConfigSet,
+		config.InitializeConfig,
+		wire.FieldsOf(new(config.Config), "Logger"),
 	)
 	return nil, nil
 }

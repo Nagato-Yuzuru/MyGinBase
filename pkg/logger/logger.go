@@ -5,7 +5,7 @@ import (
 	"errors"
 	"os"
 	"sync"
-	"terraqt.io/bedrock-go/pkg/config"
+	"terraqt.io/colas/bedrock-go/pkg/config"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
@@ -34,7 +34,7 @@ var (
 	zapLoggerOnce sync.Once
 )
 
-func ProvideZapLogger(lc config.LoggerConfig) (Logger, error) {
+func provideZapLogger(lc config.LoggerConfig) (Logger, error) {
 
 	level := lc.Level
 	format := lc.Format
@@ -69,11 +69,11 @@ func ProvideZapLogger(lc config.LoggerConfig) (Logger, error) {
 			} else if format == "console" {
 				encoder = zapcore.NewConsoleEncoder(encoderConfig)
 			} else {
-				encoder = zapcore.NewJSONEncoder(encoderConfig) // Default to JSON if format is not recognized
+				encoder = zapcore.NewJSONEncoder(encoderConfig) // Default to JSON if the format is not recognized
 			}
 
-			bufferSize := 256 * 1024
-			flushInterval := 5 * time.Second
+			bufferSize := 64 * 1024
+			flushInterval := 200 * time.Millisecond
 			writer := zapcore.AddSync(os.Stdout)
 
 			bufferedWriter := &zapcore.BufferedWriteSyncer{

@@ -2,7 +2,7 @@ package config
 
 import (
 	"errors"
-	"terraqt.io/bedrock-go/pkg/errs"
+	"terraqt.io/colas/bedrock-go/pkg/errs"
 )
 
 type ErrConfigNotFound interface {

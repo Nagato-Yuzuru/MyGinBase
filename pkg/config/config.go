@@ -7,7 +7,7 @@ import (
 // Config 是应用程序的完整配置结构
 type Config struct {
 	//App AppConfig `mapstructure:"app" validate:"required"`
-	//Server    ServerConfig    `mapstructure:"server" validate:"required"`
+	//Server ServerConfig  `mapstructure:"server" validate:"required"`
 	Database DatabaseConfig `mapstructure:"database" validate:"required"`
 	Logger   LoggerConfig   `mapstructure:"logger" validate:"required"`
 	//Cache     CacheConfig     `mapstructure:"cache"`

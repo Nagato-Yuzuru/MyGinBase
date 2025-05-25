@@ -25,6 +25,8 @@ const (
 	ErrResourceInitFailed                    // 资源初始化失败
 	ErrInfraResourceNotFound                 // infra资源未找到
 	ErrResourceCloseFailed                   // 资源关闭失败
+	ErrMarshalFailed                         // 序列化失败
+	ErrUnmarshalFailed                       // 反序列化失败
 	// 注意：原有的 ErrInvalidParam, ErrUnauthorized, ErrForbidden, ErrNotFound, ErrInternal 已移至更具体的分类
 )
 

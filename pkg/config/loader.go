@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Loader interface {
-	Load() (*Config, error)
-	Valid(cfg *Config) error
+type Loader[T any] interface {
+	Load() (*T, error)
+	Valid(cfg *T) error
 	SetLoaderParams(
 		configNames []string,
 		configType string,
@@ -23,7 +23,7 @@ type Loader interface {
 	)
 }
 
-type ViperLoader struct {
+type ViperLoader[T any] struct {
 	*viper.Viper
 	*validator.Validate
 
@@ -34,7 +34,7 @@ type ViperLoader struct {
 	defaults    map[string]any
 }
 
-func (l *ViperLoader) SetLoaderParams(
+func (l *ViperLoader[T]) SetLoaderParams(
 	configNames []string,
 	configType string,
 	configPaths []string,
@@ -61,13 +61,13 @@ func (l *ViperLoader) SetLoaderParams(
 	}
 }
 
-func newViperLoader() *ViperLoader {
-	return &ViperLoader{
+func NewViperLoader[T any]() *ViperLoader[T] {
+	return &ViperLoader[T]{
 		Viper: viper.New(), Validate: validator.New(),
 	}
 }
 
-func (l *ViperLoader) bind(t reflect.Type, parent string) {
+func (l *ViperLoader[T]) bind(t reflect.Type, parent string) {
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
@@ -104,7 +104,7 @@ func (l *ViperLoader) bind(t reflect.Type, parent string) {
 	}
 }
 
-func (l *ViperLoader) Valid(cfg *Config) error {
+func (l *ViperLoader[T]) Valid(cfg *T) error {
 	err := l.Struct(cfg)
 
 	if err == nil {
@@ -137,9 +137,9 @@ func (l *ViperLoader) Valid(cfg *Config) error {
 	return err
 }
 
-func (l *ViperLoader) Load() (*Config, error) {
+func (l *ViperLoader[T]) Load() (*T, error) {
 
-	var cfg Config
+	var cfg T
 
 	l.bind(reflect.TypeOf(cfg), "")
 

@@ -2,13 +2,20 @@ package config
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 )
 
 var (
 	loadOnce sync.Once
-	Cfg      *Config
+	Cfg      any
+)
+
+var (
+	configsCacheMu  sync.Mutex
+	configsCache    = make(map[reflect.Type]any)        // Cache for loaded configurations
+	loadOncePerType = make(map[reflect.Type]*sync.Once) // Ensure single load per type
 )
 
 type configParam struct {
@@ -48,20 +55,63 @@ func getConfigParam() configParam {
 	return param
 }
 
-func provideConfig(
-	l Loader,
-) Config {
-	loadOnce.Do(
-		func() {
-			p := getConfigParam()
-			l.SetLoaderParams(p.ConfigNames, p.ConfigType, p.ConfigPaths, p.EnvPrefix, p.Defaults)
+func ProvideGenericsConfig[T any](
+	l Loader[T],
+) T {
+	var zeroT T
+	configType := reflect.TypeOf(zeroT)
 
-			var err error
-			Cfg, err = l.Load()
+	configsCacheMu.Lock()
+
+	once, ok := loadOncePerType[configType]
+	if !ok {
+		once = &sync.Once{}
+		loadOncePerType[configType] = once
+	}
+
+	configsCacheMu.Unlock()
+
+	once.Do(
+		func() {
+			param := getConfigParam()
+			l.SetLoaderParams(
+				param.ConfigNames,
+				param.ConfigType,
+				param.ConfigPaths,
+				param.EnvPrefix,
+				param.Defaults,
+			)
+
+			cfg, err := l.Load()
 			if err != nil {
 				panic(err)
 			}
+
+			if err := l.Valid(cfg); err != nil {
+				panic(err)
+			}
+
+			configsCacheMu.Lock()
+			configsCache[configType] = cfg
+			configsCacheMu.Unlock()
 		},
 	)
-	return *Cfg
+
+	configsCacheMu.Lock()
+	cfg, ok := configsCache[configType]
+	configsCacheMu.Unlock()
+	if !ok {
+		panic("once done but config not found in cache")
+	}
+
+	cfgPtr, ok := cfg.(*T)
+	if !ok {
+		panic("config type mismatch")
+	}
+
+	return *cfgPtr
+}
+
+func ProvideConfig() Config {
+	return ProvideGenericsConfig[Config](NewViperLoader[Config]())
 }

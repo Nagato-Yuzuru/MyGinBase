@@ -6,12 +6,12 @@ import (
 
 // Config 是应用程序的完整配置结构
 type Config struct {
-	//App AppConfig `mapstructure:"app" validate:"required"`
-	//Server ServerConfig  `mapstructure:"server" validate:"required"`
-	Database DatabaseConfig `mapstructure:"database" validate:"required"`
-	Logger   LoggerConfig   `mapstructure:"logger" validate:"required"`
-	//Cache     CacheConfig     `mapstructure:"cache"`
-	//Telemetry TelemetryConfig `mapstructure:"telemetry"`
+	//App       AppConfig       `mapstructure:"app" validate:"required"`
+	//Server    ServerConfig    `mapstructure:"server" validate:"required"`
+	Database  DatabaseConfig  `mapstructure:"database" validate:"omitempty"`
+	Logger    LoggerConfig    `mapstructure:"logger" validate:"omitempty"`
+	Cache     CacheConfig     `mapstructure:"cache" validate:"omitempty"`
+	Telemetry TelemetryConfig `mapstructure:"telemetry" validate:"omitempty"`
 }
 
 // AppConfig 包含应用基础配置
@@ -30,22 +30,6 @@ type ServerConfig struct {
 	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
 	TrustedProxies  []string      `mapstructure:"trusted_proxies"`
-}
-
-// DatabaseConfig 数据库连接配置
-type DatabaseConfig struct {
-	Driver          string        `mapstructure:"driver" validate:"required,oneof=postgres mysql sqlite"`
-	Host            string        `mapstructure:"host"`
-	Port            int32         `mapstructure:"port"`
-	Username        string        `mapstructure:"username"`
-	Password        string        `mapstructure:"password"`
-	Database        string        `mapstructure:"database" validate:"required"`
-	SSLMode         string        `mapstructure:"ssl_mode"`
-	MaxOpenConns    int32         `mapstructure:"max_open_conns"`
-	MaxIdleConns    int32         `mapstructure:"max_idle_conns"`
-	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
-	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
-	DebugSQL        bool          `mapstructure:"debug_sql"`
 }
 
 // LoggerConfig 日志配置

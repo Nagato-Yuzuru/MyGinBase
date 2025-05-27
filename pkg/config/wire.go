@@ -7,13 +7,9 @@ import (
 	"github.com/google/wire"
 )
 
-var ConfigSet = wire.NewSet(
-	newViperLoader,
-	wire.Bind(new(Loader), new(*ViperLoader)),
-	provideConfig,
-)
-
 func InitializeConfig() Config {
-	wire.Build(ConfigSet)
+	wire.Build(
+		ProvideConfig,
+	)
 	return Config{}
 }

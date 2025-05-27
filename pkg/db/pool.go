@@ -5,25 +5,37 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 	"sync"
-	"terraqt.io/colas/bedrock-go/pkg/config"
 	"terraqt.io/colas/bedrock-go/pkg/errs"
 	"terraqt.io/colas/bedrock-go/pkg/logger"
+	"terraqt.io/colas/bedrock-go/pkg/typedsyncmap"
 	"time"
 )
 
 var (
-	poolOnce sync.Once
-	pool     PGPool
-	poolErr  error
+	poolErr error
 )
 
+type poolEntry struct {
+	once *sync.Once
+	pool PGPool
+	err  error
+}
+
+var poolMap = typedsyncmap.NewTypedSyncMap[string, poolEntry]()
+var poolMapMutex = &sync.Mutex{}
+
 type PGPool interface {
+	Exec(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
+	Query(context.Context, string, ...interface{}) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...interface{}) pgx.Row
 	Acquire(ctx context.Context) (*pgxpool.Conn, error)
 	driver.Pinger
 	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
+	Close()
 }
 
 type adaptPool interface {
@@ -70,7 +82,7 @@ func (p *postgresPool) getStdPool() *pgxpool.Pool {
 	return p.Pool
 }
 
-func newPostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, error) {
+func newPostgresPool(config DatabaseConfig, log logger.Logger) (PGPool, error) {
 
 	connString := fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
@@ -134,21 +146,27 @@ func newPostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, e
 	}, nil
 }
 
-func providePostgresPool(config config.DatabaseConfig, log logger.Logger) (PGPool, error) {
-	poolOnce.Do(
-		func() {
-			pool, poolErr = newPostgresPool(config, log)
-		},
-	)
+func providePostgresPool(dbConfig ConfigGetter, log logger.Logger) (PGPool, error) {
+	cfg := dbConfig.GetDbConfig()
+	poolKey := cfg.Name
 
-	if poolErr != nil {
-		log.Error(nil, "failed to create postgres connection pool", zap.Error(poolErr))
+	if entry, ok := poolMap.Load(poolKey); ok {
+		return entry.pool, nil
+	}
+
+	poolMapMutex.Lock()
+	defer poolMapMutex.Unlock()
+
+	entry := poolEntry{}
+	// TODO
+	if err != nil {
+		log.Error(nil, "failed to create postgres connection pool", zap.Error(err))
 		return nil, errs.WrapCodeError(
 			errs.ErrResourceInitFailed,
-			fmt.Errorf("failed to create postgres connection pool: %w", poolErr),
+			fmt.Errorf("failed to create postgres connection pool: %w", err),
 		)
 	}
-	return pool, poolErr
+
 }
 
 // Acquire 获取数据库连接
@@ -191,4 +209,11 @@ func (p *postgresPool) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx,
 	}
 
 	return tx, nil
+}
+
+func provideTransaction(ctx context.Context, opts pgx.TxOptions, pool PGPool) (pgx.Tx, error) {
+
+	tx, err := pool.BeginTx(ctx, opts)
+
+	return tx, err
 }
